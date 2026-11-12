@@ -59,8 +59,12 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>To-Do List</Text>
+      <Text style={styles.count}>
+        {todos.filter((t) => !t.done).length} tugas belum selesai
+      </Text>
       <View style={styles.row}>
         <TextInput
+          onSubmitEditing={addTodo}
           style={styles.input}
           placeholder="Tulis tugas..."
           value={text}
@@ -86,6 +90,7 @@ export default function Index() {
         ))}
       </View>
       <FlatList
+        ListEmptyComponent={<Text style={styles.empty}>Belum ada tugas</Text>}
         data={filteredTodos}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
@@ -150,4 +155,6 @@ const styles = StyleSheet.create({
   },
   filterBtnActive: { backgroundColor: "#4f46e5" },
   filterTextActive: { color: "#fff", fontWeight: "600" },
+  empty: { textAlign: "center", color: "#999", marginTop: 24 },
+  count: { color: "#666", marginTop: 4 },
 });
