@@ -1,98 +1,132 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function Index() {
+  const [text, setText] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [filter, setFilter] = useState<"all" | "active" | "done">("all");
+  const [todos, setTodos] = useState<
+    { id: string; title: string; done: boolean }[]
+  >([]);
+  const addTodo = () => {
+    if (!text.trim()) return;
+    setTodos([
+      ...todos,
+      { id: Date.now().toString(), title: text, done: false },
+    ]);
+    setText("");
+  };
+  const toggleTodo = (id: string) => {
+    setTodos(todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  };
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+  const deleteTodo = (id: string) => {
+    setTodos(todos.filter((t) => t.id !== id));
+  };
+  const filteredTodos = todos.filter((t) =>
+    filter === "all" ? true : filter === "done" ? t.done : !t.done,
   );
-}
+  useEffect(() => {
+    AsyncStorage.getItem("todos").then((data) => {
+      if (data) setTodos(JSON.parse(data));
+      setLoaded(true);
+    });
+  }, []);
 
-export default function HomeScreen() {
+  useEffect(() => {
+    if (loaded) AsyncStorage.setItem("todos", JSON.stringify(todos));
+  }, [todos, loaded]);
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+    <View style={styles.container}>
+      <Text style={styles.title}>To-Do List</Text>
+      <View style={styles.row}>
+        <TextInput
+          style={styles.input}
+          placeholder="Tulis tugas..."
+          value={text}
+          onChangeText={setText}
+        />
+        <Pressable style={styles.button} onPress={addTodo}>
+          <Text style={styles.buttonText}>Tambah</Text>
+        </Pressable>
+      </View>
+      <View style={styles.filterRow}>
+        {(["all", "active", "done"] as const).map((f) => (
+          <Pressable
+            key={f}
+            style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={filter === f && styles.filterTextActive}>
+              {f === "all" ? "Semua" : f === "active" ? "Belum" : "Selesai"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <FlatList
+        data={filteredTodos}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.itemRow}>
+            <Pressable style={{ flex: 1 }} onPress={() => toggleTodo(item.id)}>
+              <Text style={[styles.item, item.done && styles.itemDone]}>
+                {item.title}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => deleteTodo(item.id)}>
+              <Text style={styles.delete}>Hapus</Text>
+            </Pressable>
+          </View>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    paddingTop: 80,
+    paddingHorizontal: 20,
   },
-  safeArea: {
+  row: { flexDirection: "row", gap: 8, marginVertical: 16 },
+  input: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+  button: {
+    backgroundColor: "#4f46e5",
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    borderRadius: 8,
   },
+  buttonText: { color: "#fff", fontWeight: "600" },
+  item: { paddingVertical: 10, fontSize: 16 },
   title: {
-    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: "bold",
   },
-  code: {
-    textTransform: 'uppercase',
+  itemRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  itemDone: { textDecorationLine: "line-through", color: "#999" },
+  delete: { color: "#dc2626", fontWeight: "600" },
+  filterRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  filterBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: "#eee",
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  filterBtnActive: { backgroundColor: "#4f46e5" },
+  filterTextActive: { color: "#fff", fontWeight: "600" },
 });
