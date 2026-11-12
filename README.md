@@ -18,7 +18,7 @@ Aplikasi to-do list sederhana, project pertamaku belajar React Native dengan Exp
 ## Cara Menjalankan
 
 ```bash
-git clone https://github.com/USERNAME/todo-app-react-native.git
+git clone https://github.com/dyalamuhammad/todo-app-react-native.git
 cd todo-app-react-native
 npm install
 npx expo start
