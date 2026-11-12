@@ -13,15 +13,23 @@ export default function Index() {
   const [text, setText] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "done">("all");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [todos, setTodos] = useState<
     { id: string; title: string; done: boolean }[]
   >([]);
   const addTodo = () => {
     if (!text.trim()) return;
-    setTodos([
-      ...todos,
-      { id: Date.now().toString(), title: text, done: false },
-    ]);
+    if (editingId) {
+      setTodos(
+        todos.map((t) => (t.id === editingId ? { ...t, title: text } : t)),
+      );
+      setEditingId(null);
+    } else {
+      setTodos([
+        ...todos,
+        { id: Date.now().toString(), title: text, done: false },
+      ]);
+    }
     setText("");
   };
   const toggleTodo = (id: string) => {
@@ -29,6 +37,10 @@ export default function Index() {
   };
 
   const deleteTodo = (id: string) => {
+    if (editingId === id) {
+      setEditingId(null);
+      setText("");
+    }
     setTodos(todos.filter((t) => t.id !== id));
   };
   const filteredTodos = todos.filter((t) =>
@@ -55,7 +67,9 @@ export default function Index() {
           onChangeText={setText}
         />
         <Pressable style={styles.button} onPress={addTodo}>
-          <Text style={styles.buttonText}>Tambah</Text>
+          <Text style={styles.buttonText}>
+            {editingId ? "Simpan" : "Tambah"}
+          </Text>{" "}
         </Pressable>
       </View>
       <View style={styles.filterRow}>
@@ -76,7 +90,14 @@ export default function Index() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.itemRow}>
-            <Pressable style={{ flex: 1 }} onPress={() => toggleTodo(item.id)}>
+            <Pressable
+              style={{ flex: 1 }}
+              onLongPress={() => {
+                setEditingId(item.id);
+                setText(item.title);
+              }}
+              onPress={() => toggleTodo(item.id)}
+            >
               <Text style={[styles.item, item.done && styles.itemDone]}>
                 {item.title}
               </Text>
